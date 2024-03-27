@@ -29,10 +29,22 @@ static int my_close(struct inode *i, struct file *f) {
   return 0;
 }
 
+static int num_put_user(char * fmt, size_t idx, char __user *buf) {
+    int size = sprintf(str_buf, fmt, history[idx]);
+
+    int j;
+    for (j = 0; j < size; ++j) {
+      // TODO: check out of user buffer
+      put_user(str_buf[j], buf++);
+    }
+
+    return size;
+}
+
 static ssize_t my_read(struct file *f, char __user *buf, size_t len,
                        loff_t *off) {
   int bytes_read = 0;
-  size_t i;
+  size_t num_idx;
 
   printk(KERN_INFO "Driver: read()\n");
   
@@ -43,53 +55,46 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len,
 
   pr_info("History size: %lu\n", history_sz);
   
-  if (*off != 0) {
-    return 0;
+  // if (*off != 0) {
+  //   return 0;
+  // }
+
+  // handle first number
+  for (num_idx = 0; num_idx < history_sz - 1; ++num_idx) {
+    bytes_read += num_put_user("%lld, ", num_idx, buf);
   }
 
-  for (i = 0; i < history_sz; ++i) {
-    int size = sprintf(str_buf, "%lld, ", history[i]);
-
-    int j;
-    for (j = 0; j < size; ++j) {
-      // TODO: check out of user buffer
-      put_user(str_buf[j], buf++);
-    }
-
-    bytes_read += size;
+  if (num_idx < history_sz) {
+    bytes_read += num_put_user("%lld;\n", num_idx, buf);
   }
 
-  put_user('\n', buf++);
-  bytes_read++;
+  // *off += bytes_read;
+  *off = 0;
 
-  *off += bytes_read;
   return bytes_read;
 }
 
 static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
                         loff_t *off) {
 
-  char current_char   = 0;
+  char cur_char       = 0;
   uint64_t create_num = 0;
   char reading_num    = 0;
   uint64_t mul_nums   = 1;
   char have_num       = 0;
   size_t c_iter;
 
-  if (*off != 0) {
-    return 0;
-  }
-
   pr_info("Driver: write()\n");
 
-  for (c_iter = 0; c_iter < len && buf[c_iter]; ++c_iter){
-    get_user(current_char, buf + c_iter);
+  for (c_iter = 0; c_iter < len; ++c_iter){
+    get_user(cur_char, buf + c_iter);
 
-    if ('0' <= current_char && current_char <= '9') {
+    if ('0' <= cur_char && cur_char <= '9') {
       have_num = 1;
       reading_num = 1;
-      create_num = create_num * 10 + (current_char - '0');
+      create_num = create_num * 10 + (cur_char - '0');
     } else {
+      // Do I need to check EOF in input?
       if (reading_num) {
         mul_nums *= create_num;
         create_num = 0;
@@ -102,6 +107,7 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
     mul_nums *= create_num;
   }
 
+  pr_info("History size: %lu\n", history_sz);
   if (have_num) {
     if (history_sz == MAX_HISTORY) {
       pr_info("History is full. Clearing history.");
@@ -111,7 +117,9 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
     history[history_sz++] = mul_nums;
   }
 
+  // Do I nead to support partial write?
   *off = len;
+  // *off = 0; //say that it's EOF
 
   return len;
 }
