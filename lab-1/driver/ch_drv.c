@@ -32,12 +32,11 @@ static int my_close(struct inode *i, struct file *f) {
 static ssize_t my_read(struct file *f, char __user *buf, size_t len,
                        loff_t *off) {
   int bytes_read = 0;
+  size_t i;
 
   if (history_sz == 0) {
     pr_info("Empty history");
   }
-
-  size_t i;
 
   for (i = 0; i < history_sz; ++i) {
     // *str_buf = {0};
@@ -64,8 +63,10 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
   char read_num = 0;
   uint64_t prod = 1;
   char have_num = 0;
-
   size_t i;
+
+  pr_info("Driver: write()\n");
+
   for (i = 0; i < len; ++i){
     get_user(ch, buf + i);
 
@@ -91,10 +92,10 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
       history_sz = 0;
       memset(history, 0, MAX_HISTORY * sizeof(uint64_t));
     }
-    history[history_sz] = prod;
+    history[history_sz++] = prod;
   }
 
-  printk(KERN_INFO "Driver: write()\n");
+  *off = len;
 
   return len;
 }
