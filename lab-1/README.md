@@ -51,8 +51,15 @@
 кольцевой буффер ядра.
 
 - "можно посмотреть как работает ввод/вывод в файлы в Linux"
-- http://crossplatform.ru/?q=node/340
+- https://sysprog21.github.io/lkmpg/ — наиболее информативный
+  материал с примерами. есть перевод на habr:
 - https://habr.com/ru/companies/ruvds/articles/681880/
+- http://crossplatform.ru/?q=node/340
 - https://habr.com/ru/companies/timeweb/articles/680850/
 - https://habr.com/ru/articles/343828/
+
+
+Еще нужно понять, что значат параметры в функциях fops:
+- https://unix.stackexchange.com/questions/680598/when-you-define-a-read-function-for-a-kernel-module-where-does-the-functions-a
+- https://fastbitlab.com/linux-device-driver-programming-lecture-39-understanding-read-method/
 

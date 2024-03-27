@@ -34,56 +34,72 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len,
   int bytes_read = 0;
   size_t i;
 
+  printk(KERN_INFO "Driver: read()\n");
+  
   if (history_sz == 0) {
     pr_info("Empty history");
+    return 0;
+  }
+
+  pr_info("History size: %lu\n", history_sz);
+  
+  if (*off != 0) {
+    return 0;
   }
 
   for (i = 0; i < history_sz; ++i) {
-    // *str_buf = {0};
     int size = sprintf(str_buf, "%lld, ", history[i]);
 
     int j;
     for (j = 0; j < size; ++j) {
+      // TODO: check out of user buffer
       put_user(str_buf[j], buf++);
     }
 
     bytes_read += size;
-    // printk("%d; ", history[i]);
   }
-  // printk(KERN_INFO "Driver: read()\n");
 
+  put_user('\n', buf++);
+  bytes_read++;
+
+  *off += bytes_read;
   return bytes_read;
 }
 
 static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
                         loff_t *off) {
 
-  char       ch = 0;
-  uint64_t  num = 0;
-  char read_num = 0;
-  uint64_t prod = 1;
-  char have_num = 0;
-  size_t i;
+  char current_char   = 0;
+  uint64_t create_num = 0;
+  char reading_num    = 0;
+  uint64_t mul_nums   = 1;
+  char have_num       = 0;
+  size_t c_iter;
+
+  if (*off != 0) {
+    return 0;
+  }
 
   pr_info("Driver: write()\n");
 
-  for (i = 0; i < len; ++i){
-    get_user(ch, buf + i);
+  for (c_iter = 0; c_iter < len && buf[c_iter]; ++c_iter){
+    get_user(current_char, buf + c_iter);
 
-    if ('0' <= ch && ch <= '9') {
+    if ('0' <= current_char && current_char <= '9') {
       have_num = 1;
-      read_num = 1;
-      num = num * 10 + (ch - '0');
+      reading_num = 1;
+      create_num = create_num * 10 + (current_char - '0');
     } else {
-      if (read_num) {
-        prod *= num;
+      if (reading_num) {
+        mul_nums *= create_num;
+        create_num = 0;
       }
-      read_num = 0;
+      reading_num = 0;
     }
   }
 
-  if (read_num) {
-    prod *= num;
+  if (reading_num) {
+    mul_nums *= create_num;
   }
 
   if (have_num) {
@@ -92,7 +108,7 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
       history_sz = 0;
       memset(history, 0, MAX_HISTORY * sizeof(uint64_t));
     }
-    history[history_sz++] = prod;
+    history[history_sz++] = mul_nums;
   }
 
   *off = len;
