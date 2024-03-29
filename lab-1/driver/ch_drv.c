@@ -17,7 +17,8 @@ static struct class *cl;
 #define STR_BUF_SIZE 32
 static char str_buf[STR_BUF_SIZE] = {0};
 
-#define MAX_HISTORY 1024
+//TODO: 1024
+#define MAX_HISTORY 4
 static uint64_t history[MAX_HISTORY] = {0};
 static size_t   history_sz = 0;
 
