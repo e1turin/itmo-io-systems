@@ -81,7 +81,7 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len,
     ++num_idx;
   }
 
-  *off += num_idx;
+  *off += num_idx; // move offset by amount of numbers had been read
 
   return bytes_read;
 }
@@ -108,15 +108,16 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
       reading_num = 1;
       build_num = build_num * 10 + (cur_char - '0');
     } else {
-      // Do I need to check EOF in input?
       if (reading_num) {
         mul_nums *= build_num;
         build_num = 0;
       }
       reading_num = 0;
-      if (cur_char == 0) {
-        break;
-      }
+
+      // handle EOF?
+      // if (cur_char == 0b11111111) {      
+      //   break;
+      // }
     }
   }
 
