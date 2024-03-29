@@ -12,12 +12,14 @@ static dev_t first;
 static struct cdev c_dev;
 static struct class *cl;
 
+// Maximum chars to print number:
+// N = log_10(2^64) + 3 = 64 * log_10(2) + 3 = ~24
+#define STR_BUF_SIZE 32
+static char str_buf[STR_BUF_SIZE] = {0};
+
 #define MAX_HISTORY 1024
 static uint64_t history[MAX_HISTORY] = {0};
 static size_t   history_sz = 0;
-
-#define STR_BUF_SIZE 1024
-static char str_buf[STR_BUF_SIZE] = {0};
 
 static int my_open(struct inode *i, struct file *f) {
   printk(KERN_INFO "Driver: open()\n");
@@ -29,13 +31,16 @@ static int my_close(struct inode *i, struct file *f) {
   return 0;
 }
 
-static int num_put_user(char * fmt, size_t idx, char __user *buf) {
+// Maximum chars to be printed in user buffer:
+// MAX_HISTORY * N = 1024 * 24
+static int my_put_user(char *fmt, size_t idx, char __user **buf) {
     int size = sprintf(str_buf, fmt, history[idx]);
 
-    int j;
-    for (j = 0; j < size; ++j) {
+    int ch;
+    for (ch = 0; ch < size; ++ch) {
       // TODO: check out of user buffer
-      put_user(str_buf[j], buf++);
+      put_user(str_buf[ch], *buf);
+      ++(*buf);
     }
 
     return size;
@@ -44,32 +49,38 @@ static int num_put_user(char * fmt, size_t idx, char __user *buf) {
 static ssize_t my_read(struct file *f, char __user *buf, size_t len,
                        loff_t *off) {
   int bytes_read = 0;
-  size_t num_idx;
+  size_t num_idx = 0;
 
-  printk(KERN_INFO "Driver: read()\n");
+  printk(KERN_INFO "Mydrv: call read()\n");
   
   if (history_sz == 0) {
     pr_info("Empty history");
     return 0;
   }
 
-  pr_info("History size: %lu\n", history_sz);
+  pr_info("Mydrv: history size = %lu\n", history_sz);
+  pr_info("Mydrv: given offset = %lld\n", *off);
   
-  // if (*off != 0) {
-  //   return 0;
-  // }
-
-  // handle first number
-  for (num_idx = 0; num_idx < history_sz - 1; ++num_idx) {
-    bytes_read += num_put_user("%lld, ", num_idx, buf);
+  if (*off >= history_sz || *off < 0) {
+    return 0;
+  } else if (*off > 0) {
+    num_idx = *off;
   }
 
+  pr_info("Mydrv: printed number: ");
+  for (; num_idx < history_sz - 1; ++num_idx) {
+    bytes_read += my_put_user("%lld, ", num_idx, &buf);
+    pr_info("%lu, ", num_idx);
+  }
+
+  // handle trailing separator
   if (num_idx < history_sz) {
-    bytes_read += num_put_user("%lld;\n", num_idx, buf);
+    bytes_read += my_put_user("%lld;\n", num_idx, &buf);
+    pr_info("%lu;\n", num_idx);
+    ++num_idx;
   }
 
-  // *off += bytes_read;
-  *off = 0;
+  *off += num_idx;
 
   return bytes_read;
 }
@@ -77,40 +88,45 @@ static ssize_t my_read(struct file *f, char __user *buf, size_t len,
 static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
                         loff_t *off) {
 
-  char cur_char       = 0;
-  uint64_t create_num = 0;
-  char reading_num    = 0;
-  uint64_t mul_nums   = 1;
-  char have_num       = 0;
-  size_t c_iter;
+  char cur_char = 0;
+  size_t c_iter = 0;
 
-  pr_info("Driver: write()\n");
+  char reading_num = 0;
+  char have_num    = 0;
 
-  for (c_iter = 0; c_iter < len; ++c_iter){
+  uint64_t build_num = 0;
+  uint64_t mul_nums  = 1;
+
+  pr_info("Mydrv: call write()\n");
+
+  for (; c_iter < len; ++c_iter){
     get_user(cur_char, buf + c_iter);
 
     if ('0' <= cur_char && cur_char <= '9') {
       have_num = 1;
       reading_num = 1;
-      create_num = create_num * 10 + (cur_char - '0');
+      build_num = build_num * 10 + (cur_char - '0');
     } else {
       // Do I need to check EOF in input?
       if (reading_num) {
-        mul_nums *= create_num;
-        create_num = 0;
+        mul_nums *= build_num;
+        build_num = 0;
       }
       reading_num = 0;
+      if (cur_char == 0) {
+        break;
+      }
     }
   }
 
   if (reading_num) {
-    mul_nums *= create_num;
+    mul_nums *= build_num;
   }
 
-  pr_info("History size: %lu\n", history_sz);
+  pr_info("Mydrv: history size = %lu\n", history_sz);
   if (have_num) {
     if (history_sz == MAX_HISTORY) {
-      pr_info("History is full. Clearing history.");
+      pr_info("Mydrv: History is full. Clearing history.");
       history_sz = 0;
       memset(history, 0, MAX_HISTORY * sizeof(uint64_t));
     }
@@ -118,10 +134,9 @@ static ssize_t my_write(struct file *f, const char __user *buf, size_t len,
   }
 
   // Do I nead to support partial write?
-  *off = len;
-  // *off = 0; //say that it's EOF
+  *off = c_iter;
 
-  return len;
+  return c_iter;
 }
 
 static struct file_operations mychdev_fops = {.owner = THIS_MODULE,
@@ -131,7 +146,7 @@ static struct file_operations mychdev_fops = {.owner = THIS_MODULE,
                                               .write = my_write};
 
 static int __init ch_drv_init(void) {
-  printk(KERN_INFO "Module Init\n");
+  pr_info("Mydrv: module init\n");
   if (alloc_chrdev_region(&first, 0, 1, "lab-1") < 0) {
     return -1;
   }
@@ -159,7 +174,7 @@ static void __exit ch_drv_exit(void) {
   device_destroy(cl, first);
   class_destroy(cl);
   unregister_chrdev_region(first, 1);
-  printk(KERN_INFO "Bye!!!\n");
+  printk(KERN_INFO "Mydrv: bye-bye ;)\n");
 }
 
 module_init(ch_drv_init);
