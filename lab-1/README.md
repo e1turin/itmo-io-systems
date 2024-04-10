@@ -63,3 +63,7 @@
 - https://unix.stackexchange.com/questions/680598/when-you-define-a-read-function-for-a-kernel-module-where-does-the-functions-a
 - https://fastbitlab.com/linux-device-driver-programming-lecture-39-understanding-read-method/
 
+В текущей реализации размер буфера ограничен 4, чтобы можно было наглядно видеть, как происходит переполнение.
+Так почти каждое действие драйвера логируется в кольцевой буфер ядра, что не
+является необходимым, так что можно добавить макрос для отключения всех
+логирований в *prod* сборке.
