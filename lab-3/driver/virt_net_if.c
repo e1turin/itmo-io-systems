@@ -8,7 +8,9 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 
-static char* link = "eth0"; // "enp0s3";
+#define TARGET_PORT 20
+
+static char* link = "eth0";
 module_param(link, charp, 0);
 
 static char* ifname = "vni%d";
@@ -29,17 +31,27 @@ static char check_frame(struct sk_buff *skb, unsigned char data_shift) {
 
 	if (IPPROTO_UDP == ip->protocol) {
         udp = (struct udphdr*)((unsigned char*)ip + (ip->ihl * 4));
+
+        if (!(htons(udp->dest) == TARGET_PORT)) {
+            return 0;
+        }
+
         data_len = ntohs(udp->len) - sizeof(struct udphdr);
         user_data_ptr = (unsigned char *)(skb->data + sizeof(struct iphdr)  + sizeof(struct udphdr)) + data_shift;
         memcpy(data, user_data_ptr, data_len);
         data[data_len] = '\0';
 
-        printk("Captured UDP datagram, saddr: %d.%d.%d.%d\n",
+        printk("Captured UDP datagram, saddr: %d.%d.%d.%d:%d\n",
                 ntohl(ip->saddr) >> 24, (ntohl(ip->saddr) >> 16) & 0x00FF,
-                (ntohl(ip->saddr) >> 8) & 0x0000FF, (ntohl(ip->saddr)) & 0x000000FF);
-        printk("daddr: %d.%d.%d.%d\n",
+                (ntohl(ip->saddr) >> 8) & 0x0000FF, (ntohl(ip->saddr)) & 0x000000FF,
+                htons(udp->source)
+        );
+        printk("daddr: %d.%d.%d.%d:%d\n",
                 ntohl(ip->daddr) >> 24, (ntohl(ip->daddr) >> 16) & 0x00FF,
-                (ntohl(ip->daddr) >> 8) & 0x0000FF, (ntohl(ip->daddr)) & 0x000000FF);
+                (ntohl(ip->daddr) >> 8) & 0x0000FF, (ntohl(ip->daddr)) & 0x000000FF,
+                htons(udp->dest)
+        );
+
 
     	printk(KERN_INFO "Data length: %d. Data:", data_len);
         printk("%s", data);
