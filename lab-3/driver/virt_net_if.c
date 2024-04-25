@@ -8,7 +8,9 @@
 #include <linux/ip.h>
 #include <linux/udp.h>
 
-#define TARGET_PORT 20
+// #define TARGET_PORT 20
+static int target_port = 0;
+module_param(target_port, int, 0);
 
 static char* link = "eth0";
 module_param(link, charp, 0);
@@ -32,7 +34,7 @@ static char check_frame(struct sk_buff *skb, unsigned char data_shift) {
 	if (IPPROTO_UDP == ip->protocol) {
         udp = (struct udphdr*)((unsigned char*)ip + (ip->ihl * 4));
 
-        if (!(htons(udp->dest) == TARGET_PORT)) {
+        if (!(htons(udp->dest) == target_port)) {
             return 0;
         }
 
@@ -44,12 +46,12 @@ static char check_frame(struct sk_buff *skb, unsigned char data_shift) {
         printk("Captured UDP datagram, saddr: %d.%d.%d.%d:%d\n",
                 ntohl(ip->saddr) >> 24, (ntohl(ip->saddr) >> 16) & 0x00FF,
                 (ntohl(ip->saddr) >> 8) & 0x0000FF, (ntohl(ip->saddr)) & 0x000000FF,
-                htons(udp->source)
+                htons(udp->source) // sender port
         );
         printk("daddr: %d.%d.%d.%d:%d\n",
                 ntohl(ip->daddr) >> 24, (ntohl(ip->daddr) >> 16) & 0x00FF,
                 (ntohl(ip->daddr) >> 8) & 0x0000FF, (ntohl(ip->daddr)) & 0x000000FF,
-                htons(udp->dest)
+                htons(udp->dest)  // reciever port == target_port
         );
 
 

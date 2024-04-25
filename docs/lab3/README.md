@@ -46,6 +46,12 @@ sudo make
 sudo insmod virt_net_if.ko
 ```
 
+Или с указанием параметров `target_port` и `link`:
+
+```shell
+sudo insmod virt_net_if.ko target_port=20 link=eth0
+```
+
 Проверить загрузку модуля можно с помощью команд:
 
 ```shell
