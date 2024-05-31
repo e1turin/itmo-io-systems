@@ -1,1 +1,7 @@
-report-skeleton/
+*
+!ch_drv.c
+!lab2.c
+!virt_net_if.c
+
+!systemc_example/
+!systemc_example/**
