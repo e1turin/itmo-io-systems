@@ -1,4 +1,6 @@
 *
+!setup.sh
+
 !ch_drv.c
 !lab2.c
 !virt_net_if.c
