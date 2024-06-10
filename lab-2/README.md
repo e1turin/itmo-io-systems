@@ -3,7 +3,7 @@
 Цель работы: получить знания и навыки разработки драйверов блочных устройств
 для операционной системы Linux. 
 
-Вариант, судя по всему:
+Вариант:
 <table>
 <thead>
   <tr>
@@ -72,7 +72,19 @@
 расширенный раздел - разделы не-DOS" (см. материал [4.] и дополнение к нему [4.1.]). Поэтому в коде объявляется 
 структура записи на диске `PartEntry` и `PartTable`, ведь это не что-то специфичное 
 для Linux и нужно просто положить должным образом данные в памяти устройства.
-В связи с этим, полезными могут оказаться ссылки:
+В связи с этим, полезными могут оказатьсяroot@dev-3:/mnt/io-systems/lab-2/driver# bash bench.sh
+Filling virt disk with random data
+9+0 records in
+9+0 records out
+9437184 bytes (9.4 MB, 9.0 MiB) copied, 0.166837 s, 56.6 MB/s
+From virt disk to virt disk
+9+0 records in
+9+0 records out
+9437184 bytes (9.4 MB, 9.0 MiB) copied, 0.147865 s, 63.8 MB/s
+From virt disk to phys disk
+9+0 records in
+9+0 records out
+9437184 bytes (9.4 MB, 9.0 MiB) copied, 0.0391396 s, 241 MB/s ссылки:
 - https://en.wikipedia.org/wiki/disk_partitioning
 - https://en.wikipedia.org/wiki/Master_boot_record
 - https://www.win.tue.nl/~aeb/partitions/partition_types-1.html
