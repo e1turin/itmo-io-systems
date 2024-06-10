@@ -12,7 +12,7 @@
 
 #define DISK_NAME "vramdisk"
 
-#define MEMSIZE 0x19001 // Size of Ram disk in sectors
+#define MEMSIZE 0x19000 // Size of Ram disk in sectors
 
 int major = 0; // Variable for Major Number
 
@@ -71,7 +71,7 @@ static PartTable def_part_table =
     end_sec: 0x20,
     end_cyl: 0x9F,
     abs_start_sec: 0x1,
-    sec_in_part: 0xA000 
+    sec_in_part: 0x9FFF 
   },
   {
     boot_type: 0x00,
@@ -82,12 +82,12 @@ static PartTable def_part_table =
     end_head: 0xB,
     end_sec: 0x20,
     end_cyl: 0x9F,
-    abs_start_sec: 0xA001,
-    sec_in_part: 0xF001
+    abs_start_sec: 0xA000,
+    sec_in_part: 0xF000
   }
 };
 
-static unsigned int def_log_part_br_abs_start_sector[] = {0xA001};
+static unsigned int def_log_part_br_abs_start_sector[] = {0xA000, 0x12800};
 static const PartTable def_log_part_table[] =
 {
   {
@@ -101,20 +101,34 @@ static const PartTable def_log_part_table[] =
       end_sec: 0x20,
       end_cyl: 0x9F,
       abs_start_sec: 0x1,
-      sec_in_part: 0x8800
+      sec_in_part: 0x87ff
     },
     {
       boot_type: 0x00,
       start_head: 0x8,
       start_sec: 0x01,
       start_cyl: 0x00,
-      part_type: 0x83,
+      part_type: 0x05, // extended
       end_head: 0xB,
       end_sec: 0x20,
       end_cyl: 0x9F,
-      abs_start_sec: 0x8801,
+      abs_start_sec: 0x8800,
       sec_in_part: 0x6800
     }
+  },
+  {
+    {
+      boot_type: 0x00,
+      start_head: 0x4,
+      start_sec: 0x2,
+      start_cyl: 0x0,
+      part_type: 0x83,
+      end_head: 0x7,
+      end_sec: 0x20,
+      end_cyl: 0x9F,
+      abs_start_sec: 0x1,
+      sec_in_part: 0x67ff
+    },
   }
 };
 
@@ -210,6 +224,9 @@ static int rb_transfer(struct request *req, unsigned int *nr_bytes) {
   sector_t sector_offset = 0;
   unsigned int sectors;
   u8 *buffer;
+  u8 prev = 1;
+  u8 tmp = 1;
+  int i = 0;
 
   rq_for_each_segment(bv, req, iter) {
     buffer = page_address(BV_PAGE(bv)) + BV_OFFSET(bv);
@@ -225,15 +242,24 @@ static int rb_transfer(struct request *req, unsigned int *nr_bytes) {
            (unsigned long long)(start_sector),
            (unsigned long long)(sector_offset), buffer, sectors);
 
-    if (dir == WRITE) /* Write to the device */
-      memcpy((device.data) +
-                 ((start_sector + sector_offset) * MDISK_SECTOR_SIZE),
-             buffer, sectors * MDISK_SECTOR_SIZE);
-    else /* Read from the device */
+    if (dir == WRITE) { /* Write to the device */
+      if (sector_offset == 0) {
+        prev = *buffer;
+      } else {
+        prev = *(device.data + (start_sector + sector_offset) * MDISK_SECTOR_SIZE - 1);
+      }
+      for (i = 0; i < sectors * MDISK_SECTOR_SIZE; i++) {
+        tmp = prev * prev;
+        *((u8 *)(device.data + (start_sector + sector_offset) * MDISK_SECTOR_SIZE) + i) = tmp;
+        prev = tmp;
+      }
+      // memcpy((device.data) + ((start_sector + sector_offset) * MDISK_SECTOR_SIZE),
+      //          buffer, sectors * MDISK_SECTOR_SIZE);
+    } else { /* Read from the device */
       memcpy(buffer,
-             (device.data) +
-                 ((start_sector + sector_offset) * MDISK_SECTOR_SIZE),
+             (device.data) + ((start_sector + sector_offset) * MDISK_SECTOR_SIZE),
              sectors * MDISK_SECTOR_SIZE);
+    }
 
     sector_offset += sectors;
     *nr_bytes += sectors * MDISK_SECTOR_SIZE;
