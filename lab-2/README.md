@@ -17,7 +17,7 @@
     <td>
       Один первичный раздел размером 20Мбайт и один расширенный раздел,
       содержащий два логических раздела размером 17Мбайт и 13Мбайт. Каждый
-      последующий байт должен быть результатом умножения предыдущих.|
+      последующий байт должен быть результатом умножения предыдущих.
     </td>
   </tr>
 </tbody>
@@ -52,10 +52,14 @@
    [https://lwn.net/Kernel/LDD3/](https://lwn.net/Kernel/LDD3/)
 2. Ромоданов Н. Драйверы устройств в Linux. Электронный ресурс. Ссылка:
    [http://rus-linux.net/MyLDP/BOOKS/drivers/linux-device-drivers-00.html](http://rus-linux.net/MyLDP/BOOKS/drivers/linux-device-drivers-00.html)
+   - особенно раздел про разработку виртуального жесткого дистка в оперативной памяти:
+     https://rus-linux.net/MyLDP/BOOKS/drivers/linux-device-drivers-15.html
 3. О блочных устройствах (eng):
    [https://linux-kernellabs.github.io/refs/heads/master/labs/block_device_drivers.html](https://linux-kernellabs.github.io/refs/heads/master/labs/block_device_drivers.html)
 4. О логической структуре жёсткого диска:
    [https://www.opennet.ru/base/dev/hdd_struct.txt.html](https://www.opennet.ru/base/dev/hdd_struct.txt.html)
+   1. Статья с исправлениями ошибок в предыдущей и дополнительными комментариями: 
+     https://www.opennet.ru/base/dev/hdd_struct2.txt.html
 5. О цилиндрах, головках и секторах (CHS):
    [https://ru.wikipedia.org/wiki/CHS](https://ru.wikipedia.org/wiki/CHS)
 
@@ -63,5 +67,33 @@
 
 ## Комментарии
 
+Оказывается, что в лабе нужно реализовать разделы для конкретной логической 
+структуры жесткого диска, а именно стандарта Microsoft  — "основной раздел -
+расширенный раздел - разделы не-DOS" (см. материал [4.] и дополнение к нему [4.1.]). Поэтому в коде объявляется 
+структура записи на диске `PartEntry` и `PartTable`, ведь это не что-то специфичное 
+для Linux и нужно просто положить должным образом данные в памяти устройства.
+В связи с этим, полезными могут оказаться ссылки:
+- https://en.wikipedia.org/wiki/disk_partitioning
+- https://en.wikipedia.org/wiki/Master_boot_record
+- https://www.win.tue.nl/~aeb/partitions/partition_types-1.html
 
+А так же нужно понять, как должен выглядеть расширенный раздел:
+- https://en.wikipedia.org/wiki/Extended_boot_record
 
+Для примера выданного к заданию, можно построить схему расположения секторов.
+Судя по коду, абстракция цилиндров, головок и секторов не используется, поэтому
+достаточно сделать верное логическое разибиение по секторам.
+
+![Объяснение структуры диска](../res/lab2-disk-partition-explainatino.excalidraw.svg)
+
+Подсчитаем адреса. 
+
+- 20 МБ → 20 * 1024 * 1024 / 512 = 0xA000 секторов
+- 30 МБ → 30 * 1024 * 1024 / 512 = 0xF000 секторов
+    - 17 МБ → 17 * 1024 * 1024 / 512 = 0x8800 секторов
+    - 13 МБ → 13 * 1024 * 1024 / 512 = 0x6800 секторов
+- итого 0x19000 секторов + 1 на EBR
+
+Сделаем 2 записи в MBR: для основного раздела (на 0xA000 секторов) и
+расширенного (на 0xF000 секторов). В расширенном разделе добавим 2 записи в
+EBR: для раздела на 0x8800 секторов и на 0x6800 секторов.
