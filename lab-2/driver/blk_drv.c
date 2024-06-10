@@ -254,7 +254,8 @@ static int rb_transfer(struct request *req, unsigned int *nr_bytes) {
         prev = tmp;
       }
       // memcpy((device.data) + ((start_sector + sector_offset) * MDISK_SECTOR_SIZE),
-      //          buffer, sectors * MDISK_SECTOR_SIZE);
+      //        buffer, 
+      //        sectors * MDISK_SECTOR_SIZE);
     } else { /* Read from the device */
       memcpy(buffer,
              (device.data) + ((start_sector + sector_offset) * MDISK_SECTOR_SIZE),
