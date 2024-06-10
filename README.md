@@ -57,7 +57,8 @@ multipass mount D:/Projects/itmo-io-systems/ dev-io:/mnt/io-systems/
 
 Теперь нужно установить нужные для разработки пакеты, для удобства составлен
 скрипт [`res/setup.sh`](./res/setup.sh), но на нем не установить права на
-исполне, так что используйте `cat` и copy-paste для простоты.
+исполне, так что используйте `cat` и copy-paste для простоты, либо 
+`sudo bash ./res/setup.sh`, если остался формат unix.
 
 - для систем отличных от Ubuntu, может потребоваться другой пакет с заголовками
   (см. https://askubuntu.com/questions/75709/how-do-i-install-kernel-header-files)
